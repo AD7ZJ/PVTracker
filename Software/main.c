@@ -146,6 +146,9 @@ void ReadEEProm() {
     pumpTime |= (uint32_t)eeprom_read(10);
 }
 
+/**
+ * Writes the various saved parameters into EEPROM
+ */
 void WriteEEProm() {
     eeprom_write(0, (centerPosition >> 8));
     eeprom_write(1, (centerPosition & 0x00FF));
@@ -251,6 +254,28 @@ void menu(MENU_PAGE_T * page) {
             lcd_goto(40);
             sprintf(display_out, "%02d:%02d", updateTime / 60, updateTime % 60);
             lcd_puts((char *) display_out);
+            break;
+        case NIGHT_DELAY:
+            // setup the nightDelay variable to be modified
+            varToModify = &nightDelay;
+            lcd_puts("Night Delay:");
+            lcd_goto(40);
+            sprintf(display_out, "%02d:%02d:%02d", (nightDelay / 3600), (nightDelay % 3600)/60, (nightDelay % 3600) % 60);
+            lcd_puts((char *) display_out);
+            break;
+        case CENTER_TIME:
+            // setup the centerTime variable to be modified
+            varToModify = (uint16_t*)&centerTime;
+            lcd_puts("Center Time:");
+            lcd_goto(40);
+            sprintf(display_out, "%02d:%02d", centerTime / 60, centerTime % 60);
+            lcd_puts((char *) display_out);
+            break;
+        case MOVE_SAFE:
+            // setup the centerTime variable to be modified
+            lcd_puts("Press 'select'");
+            lcd_goto(40);
+            lcd_puts("to move safe.");
             break;
     }
 }

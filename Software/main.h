@@ -40,6 +40,9 @@ typedef enum {
     ADC_PAGE = 1,
     CENTER_POS = 2,
     UPDATE_TIME = 3,
+    NIGHT_DELAY = 4,
+    CENTER_TIME = 5,
+    MOVE_SAFE = 6,
     END
 } MENU_PAGE_T;
 
