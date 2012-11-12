@@ -51,6 +51,9 @@ typedef enum {
 MENU_PAGE_T page;
 BUTTON_PRESS_T buttonPress;
 
+// pointer to variable that'll be incremented or decremented
+uint16_t * varToModify;
+
 // track time count in seconds
 uint16_t trackCounter;
 
@@ -63,3 +66,4 @@ void DebounceSwIncrease();
 void DebounceSwDecrease();
 void DebounceSwSelect();
 void IncreaseValue(uint16_t * value);
+void DecreaseValue(uint16_t * value);

@@ -63,27 +63,36 @@ void main(void) {
 
 	while (1) {
 		switch (buttonPress) {
-	    case SCROLL:	
+	    case SCROLL:
+            // clear the modify pointer
+            varToModify = 0;	
+            buttonPress = NONE;
+
             if(++page >= END)
                 page = 0;
-                buttonPress = NONE;
-                // update the display
-                menu(&page);
+
+            // update the display
+            menu(&page);
             break;
 
         case INCREASE:
-            IncreaseValue(&centerPosition);
+            IncreaseValue(varToModify);
+            buttonPress = NONE;
+            break;     
+
+        case DECREASE:
+            DecreaseValue(varToModify);
             buttonPress = NONE;
             break;
-        }      
+        }
             
+        /************ 1s tasks ***********/
 		if(secFlag) {
             // update the track time
             if(--trackCounter == 0) {
                 // update the track
-
+                trackCounter = 1800;
             }
-
 
             // update the display
             menu(&page);
@@ -92,9 +101,17 @@ void main(void) {
 	} 
 }
 
+/**
+ * 'Increase' button handler
+ * 
+ * @param value Pointer to variable to be incremented
+ */
 void IncreaseValue(uint16_t * value) {
+    if(value == 0)
+        return;
+
     int i = 0;
-    *value++;
+    (*value)++;
 
     // update the display
     menu(&page);
@@ -104,11 +121,39 @@ void IncreaseValue(uint16_t * value) {
     i = 0;
     while(SW_INCREASE) {
         __delay_ms(10);
-        *value++;
+        (*value)++;
         menu(&page);
     }
 }
 
+/**
+ * 'Decrease' button handler
+ * 
+ * @param value Pointer to variable to be decremented
+ */
+void DecreaseValue(uint16_t * value) {
+    if(value == 0)
+        return;
+
+    int i = 0;
+    (*value)--;
+
+    // update the display
+    menu(&page);
+
+    while(SW_INCREASE && i++ < 100)
+        __delay_ms(10);
+    i = 0;
+    while(SW_INCREASE) {
+        __delay_ms(10);
+        (*value)--;
+        menu(&page);
+    }
+}
+
+/**
+ * State machine called to update the display
+ */
 void menu(MENU_PAGE_T * page) {
     unsigned int ad_in;
 
@@ -129,6 +174,9 @@ void menu(MENU_PAGE_T * page) {
         lcd_puts((char *)display_out);
         break;
     case CENTER_POS:
+        // setup the centerPosition variable to be modified
+        varToModify = &centerPosition;
+
         lcd_puts("Center Position");
         lcd_goto(40);
 	    sprintf(display_out, "%d", centerPosition);
