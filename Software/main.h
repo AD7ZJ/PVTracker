@@ -11,8 +11,10 @@ typedef unsigned long uint32_t;
 typedef long int32_t;
 
 // timing flags
-unsigned int secFlag;
-unsigned int msElapsed;
+uint8_t secFlag;
+uint16_t msElapsed;
+uint32_t systemTick;
+uint32_t backlightOffTick;
 
 // display buffer
 char display_out[40];
@@ -37,6 +39,7 @@ typedef enum {
     MAIN_PAGE = 0,
     ADC_PAGE = 1,
     CENTER_POS = 2,
+    UPDATE_TIME = 3,
     END
 } MENU_PAGE_T;
 
@@ -60,7 +63,22 @@ uint16_t trackCounter;
 // center position in raw ADC values (0-1023)
 uint16_t centerPosition;
 
+// time in s to run the pump to return the array to center
+uint8_t centerTime;
+
+// time in s to stay in the center before returning east
+uint16_t nightDelay;
+
+// time in s to wait between updating the track
+uint16_t updateTime;
+
+// total time in s the pump has been running
+uint32_t pumpTime;
+
 void menu(MENU_PAGE_T * page);
+void ReadEEProm();
+void WriteEEProm();
+void ButtonHandler();
 void DebounceSwScroll();
 void DebounceSwIncrease();
 void DebounceSwDecrease();
