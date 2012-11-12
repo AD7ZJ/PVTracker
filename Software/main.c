@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define	XTAL_FREQ	4MHZ
+#define	_XTAL_FREQ 4000000
 #include "adc.h"
 #include "lcd.h"
 #include "main.h"
@@ -25,6 +25,10 @@ void init(void) {
 	TMR1CS = 0;
 	TMR1ON = 1;
 
+    // Only using AN0 - make the rest digital I/O
+    ANSELH = 0x00;
+    ANSEL = 0x01;
+
     // enable interrupts
 	PEIE = 1;
 	TMR1IE = 1;
@@ -35,10 +39,9 @@ void init(void) {
 
 
 void main(void) {
-	unsigned int ad_in;
 	char display_out[15];
 	OPTION=0x00;
- 	GIE=0;
+
 	init();
 	initAdc();	// initialise the A2D module
 
@@ -51,30 +54,132 @@ void main(void) {
 	//lcd_puts((char *)display_out);
  	//lcd_puts("Testing..");
  	//lcd_goto(40);
-
+    
+    LCD_BACKLIGHT = 1;
+    // start on the home page
+    page = MAIN_PAGE;
+    //FIXME: needs to be read from EEPROM
+    trackCounter = 1800;
 
 	while (1) {
-		//PORTB = counter;
-		ad_in = readAdc(0);		// sample the analog value on RA0
-	
+		switch (buttonPress) {
+	    case SCROLL:	
+            if(++page >= END)
+                page = 0;
+                buttonPress = NONE;
+                // update the display
+                menu(&page);
+            break;
+
+        case INCREASE:
+            IncreaseValue(&centerPosition);
+            buttonPress = NONE;
+            break;
+        }      
+            
 		if(secFlag) {
-			lcd_clear();
-			sprintf(display_out, "ADC0: %d", ad_in);
-			lcd_puts((char *)display_out);
+            // update the track time
+            if(--trackCounter == 0) {
+                // update the track
+
+            }
+
+
+            // update the display
+            menu(&page);
 			secFlag = 0;
 		}
 	} 
 }
 
+void IncreaseValue(uint16_t * value) {
+    int i = 0;
+    *value++;
+
+    // update the display
+    menu(&page);
+
+    while(SW_INCREASE && i++ < 100)
+        __delay_ms(10);
+    i = 0;
+    while(SW_INCREASE) {
+        __delay_ms(10);
+        *value++;
+        menu(&page);
+    }
+}
+
+void menu(MENU_PAGE_T * page) {
+    unsigned int ad_in;
+
+    lcd_clear();
+    switch (*page) {
+    case MAIN_PAGE:
+        lcd_puts("Auto Track Day");
+        lcd_goto(40);
+	    sprintf(display_out, "Moves in: %02d:%02d", (trackCounter / 60), (trackCounter % 60));
+        lcd_puts((char *)display_out);
+        break;
+    case ADC_PAGE:
+        // read the value on ADC0
+        ad_in = readAdc(0);
+        lcd_puts("Sensor Value");
+        lcd_goto(40);
+	    sprintf(display_out, "%d", ad_in);
+        lcd_puts((char *)display_out);
+        break;
+    case CENTER_POS:
+        lcd_puts("Center Position");
+        lcd_goto(40);
+	    sprintf(display_out, "%d", centerPosition);
+        lcd_puts((char *)display_out);
+        break;
+    }
+}
+
+void DebounceSwScroll() {
+    static uint16_t state = 0;
+    state = (state << 1) | !SW_SCROLL | 0xE000;
+    if(state==0xF000)
+        buttonPress = SCROLL;
+}
+
+void DebounceSwIncrease() {
+    static uint16_t state = 0;
+    state = (state << 1) | !SW_INCREASE | 0xE000;
+    if(state==0xF000) 
+        buttonPress = INCREASE;
+}
+
+void DebounceSwDecrease() {
+    static uint16_t state = 0;
+    state = (state << 1) | !SW_DECREASE | 0xE000;
+    if(state==0xF000)
+        buttonPress = DECREASE;
+}
+
+void DebounceSwSelect() {
+    static uint16_t state = 0;
+    state = (state << 1) | !SW_SELECT | 0xE000;
+    if(state==0xF000)
+        buttonPress = SELECT;
+}
+
 interrupt isr(void) {
 	if(TMR1IF) {
-		flag = 1;
 		TMR1IF = 0;
         
         // reload to generate a 1ms tick
         TMR1H = 0xFC;
         TMR1L = 0x17;
-        
+
+        // debounce inputs
+        DebounceSwScroll();
+        DebounceSwIncrease();
+        DebounceSwDecrease();
+        DebounceSwSelect();        
+
+        // update second counter
         if(msElapsed++ >= 1000) {
             secFlag = 1;
             msElapsed = 0;

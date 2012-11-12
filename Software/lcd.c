@@ -37,10 +37,15 @@
 void
 lcd_write(unsigned char c)
 {
+   unsigned char temp = 0;
+   temp = LCD_DATA & 0xF0;
    __delay_us(40);
-   LCD_DATA = ( ( c >> 4 ) & 0x0F );
+   temp |= ( ( c >> 4 ) & 0x0F );
+   LCD_DATA = temp;
    LCD_STROBE();
-   LCD_DATA = ( c & 0x0F );
+   temp = LCD_DATA & 0xF0;
+   temp |= ( c & 0x0F );
+   LCD_DATA = temp;
    LCD_STROBE();
 }
 
@@ -79,7 +84,6 @@ lcd_putch(char c)
 /*
 * Go to the specified position
 */
-
 void
 lcd_goto(unsigned char pos)
 {
