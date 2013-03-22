@@ -1,25 +1,14 @@
-'Designed for a PIC16F747
-'Hardware configuration is as follows:
-'Pin 1		Vcc
-'Pin 2 		West Limit Switch input
-'Pin 3 		West LED input
-'Pin 4		Vpp
-'Pin 5		N/C
-'Pin 6		N/C
-'Pin 7		LED output (night mode)
-'Pin 8		East/West switch
-'Pin 9		East limit switch input
-'Pin 10		N/C
-'Pin 11		Manual/Auto switch input
-'Pin 12		N/C
-'Pin 13		N/C
-'Pin 14		West solenoid output
-'Pin 15		East solenoid output
-'Pin 16		Pump relay output
-'Pin 17		East LED input
-'Pin 18		ICSPCLK
-'Pin 19		ICSPDAT
-'Pin 20		Vss
+'***** Designed for a PIC16F747 and built using MeLabs Pic Basic Pro v2.50 *****
+'*
+'* Version 1.0
+'* 
+'* Changelog:
+'* Apr 15, 2010       v0.1        Original Release
+'* May 10, 2010       v0.2        Misc tweaks
+'* Jun 15, 2010       v0.3        Updated to run on new hardware
+'* Aug 20, 2010       v1.0        Fixed menus to display in the correct units
+'*
+'*******************************************************************************
 
 
 @ device pic16F747, INTRC_OSC_NOCLKOUT, MCLR_OFF 
@@ -38,16 +27,11 @@ lcdBacklight	var		PORTB.5
 pumpRelay       VAR     PORTC.2
 eastSol         var     PORTC.1
 westSol         VAR     PORTC.0
+
+' How much differenece in sensor values is tolerated before we re-align
 MAX_DELTA		CON		30
 
-OSCCON = %01100000
-
-'OSCCON.6 = 1
-'OSCCON.5 = 1
-'OSCCON.4 = 0
-'OSCcON.1 = 1
-'osccon.0 = 0
-
+' Variable declarations
 lcdON			var 	byte
 trackMode       VAR     BYTE
 ledValue        var     word
@@ -62,7 +46,7 @@ menuItem        var     byte
 nightDelay      var     word
 trackUpdate     var     word
 timeCnt         var     word
-twirly          VAR     byte
+tmp             VAR     WORD
 centerTime      VAR     WORD
 eveningDelay    VAR     WORD
 
@@ -71,6 +55,7 @@ TRISA = %00111111
 TRISB = %00000000
 TRISC = %10000000
 TRISD = %00110000
+OSCCON = %01100000
 
 'Set AN13 - AN2 pins as digital inputs
 ADCON1 = ADCON1 | %00001101
@@ -103,12 +88,10 @@ DEFINE LCD_DATAUS	50
 Define	ADC_BITS		10	' Set number of bits in result
 Define	ADC_CLOCK		3	' Set clock source (3=RC)
 Define	ADC_SAMPLEUS	200	' Set sampling time in uS
-'Define	OSC				4
 ' Right-justify the ADC value
 ADCON1.7 = 1
 
 
-twirly = 0
 lcdON = 0
 trackMode = 0       ' Default to auto day-track
 trackupdate = 16000 ' Default to updating the track every half hour
@@ -122,6 +105,7 @@ timecnt = 0
 
 ' Give everything a bit to stabilize
 Pause 500
+
 
 main:
     ' Initialize the low-pass filter
@@ -158,10 +142,8 @@ main:
 			lcdON = lcdON + 1
 		endif
 		
-		' Save current values
-		
-		LCDOUT $FE, 1, "Tracking Mode:"
 		if(trackMode == 0) then
+            LCDOUT $FE, 1, "Tracking Mode:"
             lcdout $FE,$C0,"Auto Day ",#timeCnt
             if(lcdon != 0) then
                 High lcdbacklight
@@ -187,7 +169,6 @@ main:
 	wend
 
 moveNight:
-    LCDOUT $FE, 1, "Tracking Mode:"
     while(timeCnt < nightDelay && !sw_scroll && !sw_manauto)
         pause 1000
         lcdout $FE, $C0,"Night:  ", #timeCnt
@@ -209,7 +190,6 @@ moveNight:
 RETURN
 	
 moveEvening:
-    LCDOUT $FE, 1, "Tracking Mode:"
     while(timeCnt < eveningdelay && !sw_scroll && !sw_manauto) 
         pause 1000
         lcdout $FE, $C0,"Evening  ", #timeCnt
@@ -291,14 +271,15 @@ menu:
         High lcdbacklight
         lcdon = 1
         while(menuItem == 2)
-            LCDOUT $FE,$C0, #centerTime
+            tmp = centerTime / 1000
+            LCDOUT $FE,$C0, #tmp
             High lcdbacklight
             pause 50
             if(sw_increase) then
-                centertime = centerTime + 1
+                centertime = centerTime + 1000
             endif
             if(sw_decrease) then
-                centertime = centerTime - 1
+                centertime = centerTime - 1000
             endif
             if(sw_scroll) then
                 while(sw_scroll)
@@ -335,7 +316,7 @@ menu:
     
     if(menuItem == 4) then
         'Adjust how often we update the array position
-        LCDOUT $FE, 1, "Track Update(s):"
+        LCDOUT $FE, 1, "Update:(1/10s)"
         High lcdbacklight
         lcdon = 1
         while(menuItem == 4)
@@ -356,6 +337,8 @@ menu:
             endif
         wend
     endif
+    
+    LCDOUT $FE, 1, "Tracking Mode:"
 Return
 	
 track:
@@ -414,15 +397,18 @@ Return
 
 ' This is just for moving the array back to the east at night
 moveEast:
+    limcnt = 0
 	'If we're not already pressed against the limit switch...
 	If(eastLimit) Then
 		'Turn on the pump
 		High pumpRelay
-		'Wait a few seconds for it to come up to speed and build up pressure
+		'Wait a bit for the pump to come up to speed and build up pressure
 		Pause 200
-		'Turn on the solenoid to move the array east
-		while(eastLimit)
+		'Turn on the solenoid to move the array east.  Timeout in one minute
+		while(eastLimit && (limcnt < 1200))
             PortC = %00000110
+            Pause 50
+            limcnt = limcnt + 1
         wend
 		Pause 50
 		'Turn off the solenoid
