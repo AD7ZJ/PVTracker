@@ -8,6 +8,10 @@
 '* Jun 15, 2010       v0.3        Updated to run on new hardware
 '* Aug 20, 2010       v1.0        Fixed menus to display in the correct units
 '* Oct 03, 2010       v1.1        Updated to run on a 16F887
+'* Dec 15, 2010       v1.2        
+'* Jun 19, 2011       v1.3        Fixed initialization bug, initial values are
+'*                                now loaded at boot from EEPROM
+'*                                Added moveSafe routine
 '*
 '*******************************************************************************
 
@@ -36,8 +40,6 @@ MAX_DELTA		CON		30
 lcdON			var 	byte
 trackMode       VAR     BYTE
 ledValue        var     word
-ledValue1       VAR     WORD
-ledValue2       VAR     WORD
 centerVal       var     word
 offset          var     word
 pumptime        var     byte
@@ -94,18 +96,6 @@ Define	ADC_SAMPLEUS	200	' Set sampling time in uS
 ' Right-justify the ADC value
 ADCON1.7 = 1
 
-
-lcdON = 0
-trackMode = 0       ' Default to auto day-track
-trackupdate = 1600  ' Default to updating the track every half hour
-centerval = 450     ' 496 all the way west
-                    ' 763 all to the east
-offset = 0
-eveningdelay = 3600
-nightdelay = 28800
-centerTime = 10
-timecnt = 0
-
 ' Initialize the EEPROM values at compile time
 EEPROM 0,[194]      ' centerPos low
 EEPROM 1,[1]        ' centerPos high
@@ -115,15 +105,34 @@ EEPROM 4,[112]      ' nightDelay high
 EEPROM 5,[64]       ' trackUpdate low
 EEPROM 6,[6]        ' trackupdate high
 
+' Initialize variables on bootup
+lcdON = 0
+trackMode = 0       ' Default to auto day-track
+offset = 0
+eveningdelay = 3600
+timecnt = 0
+
+read 0, centerVal.byte0
+read 1, centerVal.Byte1
+READ 2, centerTime
+read 3, nightDelay.byte0
+read 4, nightDelay.Byte1
+read 5, trackUpdate.byte0
+read 6, trackUpdate.Byte1
+
+
 ' Give everything a bit to stabilize
 Pause 500
 
+LCDOUT $FE, 1, "Booting..."
+lcdout $FE,$C0,"Firmware: v1.3"
+Pause 4000
+LCDOUT $FE, 1, "Build date:"
+lcdout $FE,$C0,"Jun 22, 2011"
+Pause 4000
 
 main:
-    ' Initialize the low-pass filter
     ADCin 0, ledvalue
-    'adcin 0, ledvalue1
-    'adcin 0, ledvalue2
     
 	while(1)
 		Pause 95
@@ -364,8 +373,57 @@ menu:
         WRITE 5, trackUpdate.byte0
         WRITE 6, trackUpdate.Byte1
     endif
+    
+    IF(menuItem == 5) THEN
+        LCDOUT $FE, 1, "Press Track to"
+        lcdout $FE,$C0,"move safe."
+        High lcdbacklight
+        lcdon = 1
+        WHILE(menuItem == 5)
+            if(sw_scroll) then
+                while(sw_scroll)
+                    ' Debounce the switch
+                wend
+                menuItem = 6
+            endif
+            IF(sw_select) THEN
+                menuItem = 6
+                WHILE(sw_select)
+                    ' Debounce the switch
+                WEND
+                GOSUB moveSafe
+            ENDIF
+        WEND
+    
+    
+    ENDIF
     LCDOUT $FE, 1, "Tracking Mode:"
 Return
+
+moveSafe:
+    limcnt = 0;
+    If(westLimit) Then
+		'Turn on the pump
+		High pumpRelay
+		'Wait a bit for it to build up a little pressure
+		Pause 200
+		'Turn on the solenoid to move the array west
+		PortC = %00000101
+		Pause 100
+		
+		While (westLimit && (limcnt < 4800) && (!sw_manauto))        
+			Pause 50
+			limcnt = limcnt + 1
+		Wend
+		
+		'Turn off the solenoid
+		PortC = %00000100
+		Pause 1000
+		'Shut down the pump
+		PortC = %00000000
+	Endif
+    limcnt = 0;
+RETURN
 	
 track:
 	ADCIN 0, ledValue		' Read ADC channel 0 (port A.0, pin 2) 
