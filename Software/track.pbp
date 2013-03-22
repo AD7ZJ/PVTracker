@@ -12,7 +12,8 @@
 '* Jun 19, 2011       v1.3        Fixed initialization bug, initial values are
 '*                                now loaded at boot from EEPROM
 '*                                Added moveSafe routine
-'* Sep 03, 2012       v1.4        Increased safety delay 
+'* Sep 03, 2012       v1.4        Increased safety delay
+'* Jan 01, 2013       v1.5        Changed units on menu pages 
 '*
 '* Update firmware version and build time on line 130
 '*******************************************************************************
@@ -54,6 +55,7 @@ timeCnt         var     word
 tmp             VAR     WORD
 centerTime      VAR     BYTE
 eveningDelay    VAR     WORD
+tempVar         VAR     WORD
 
 'Set the TRIS registers.  0 = output, 1 = input
 TRISA = %00111111
@@ -127,17 +129,18 @@ read 6, trackUpdate.Byte1
 Pause 500
 
 LCDOUT $FE, 1, "Booting..."
-lcdout $FE,$C0,"Firmware: v1.4"
+lcdout $FE,$C0,"Firmware: v1.5"
 Pause 4000
 LCDOUT $FE, 1, "Build date:"
-lcdout $FE,$C0,"Sep 03, 2012"
+lcdout $FE,$C0,"Jan 01, 2013"
 Pause 4000
 
 main:
     ADCin 0, ledvalue
     
 	while(1)
-		Pause 95
+        ' idea is to go through this loop at 10 Hz
+		Pause 90
 		if(sw_scroll) Then
 			while(sw_scroll)
 				' Wait until we let off the button
@@ -166,8 +169,11 @@ main:
 		endif
 		
 		if(trackMode == 0) then
+            tempVar = trackUpdate - (timeCnt / 10)
             LCDOUT $FE, 1, "Tracking Mode:"
-            lcdout $FE,$C0,"Auto Day ",#timeCnt
+            lcdout $FE,$C0,"Auto Day ",#(tempVar / 60)
+            LCDOUT ":"
+            LCDOUT #(tempVar // 60)
             if(lcdon != 0) then
                 High lcdbacklight
             endif
@@ -193,9 +199,15 @@ main:
 
 moveNight:
     while(timeCnt < nightDelay && !sw_scroll && !sw_manauto)
-        pause 1000
-        lcdout $FE, $C0,"Night:  ", #timeCnt
+        tempVar = nightDelay - timeCnt
+        LCDOUT $FE, 1, "Tracking Mode:"
+        lcdout $FE, $C0,"Night ", #(tempVar / 3600)
+        LCDOUT ":"
+        LCDOUT #((tempVar // 3600)/60)
+        LCDOUT ":"
+        LCDOUT #((tempVar // 3600)//60)
         timecnt = timecnt + 1
+        pause 990
     wend
     ' In case either of these buttons were pressed, 
     if(sw_scroll) then
@@ -213,10 +225,16 @@ moveNight:
 RETURN
 	
 moveEvening:
-    while(timeCnt < eveningdelay && !sw_scroll && !sw_manauto) 
-        pause 1000
-        lcdout $FE, $C0,"Evening  ", #timeCnt
+    while(timeCnt < eveningdelay && !sw_scroll && !sw_manauto)
+        tempVar = eveningDelay - timeCnt 
+        LCDOUT $FE, 1, "Tracking Mode:"
+        lcdout $FE, $C0,"Evening ", #(tempVar / 3600)
+        LCDOUT ":"
+        LCDOUT #((tempVar // 3600)/60)
+        LCDOUT ":"
+        LCDOUT #((tempVar // 3600)//60)
         timeCnt = timeCnt + 1
+        pause 990
     wend
     ' In case either of these buttons were pressed
     if(sw_scroll) then
@@ -247,10 +265,10 @@ menu:
     menuItem = 0
     if(menuItem == 0) then
         'Display ADC Values
-        LCDOUT $FE, 1, "Sensor Value:"
         High lcdbacklight
         lcdon = 1
         while(menuItem == 0)
+            LCDOUT $FE, 1, "Sensor Value:"
             ADCIN 0, ledValue
             LCDOUT $FE,$C0, #ledValue
             High lcdbacklight
@@ -267,12 +285,12 @@ menu:
     if(menuItem == 1) then
         ' Adjust the value where the array is pointing at the sun
         ' Higher values offset to the west, lower values offset to the east
-        LCDOUT $FE, 1, "Center Position:"
         High lcdbacklight
         lcdon = 1
         read 0, centerVal.byte0
         read 1, centerVal.Byte1
         while(menuItem == 1)
+            LCDOUT $FE, 1, "Center Position:"
             LCDOUT $FE,$C0, #centerval
             High lcdbacklight
             pause 50
@@ -295,12 +313,12 @@ menu:
     
     if(menuItem == 2) then
         ' Adjust how long it takes to run the array back to center
-        LCDOUT $FE, 1, "Center Time(s):"
         High lcdbacklight
         lcdon = 1
         READ 2, centerTime
         Pause 100
         while(menuItem == 2)
+            LCDOUT $FE, 1, "Center Time(s):"
             LCDOUT $FE,$C0, #centerTime
             High lcdbacklight
             pause 50
@@ -322,20 +340,22 @@ menu:
             
     if(menuItem == 3) then
         ' Adjust the night delay
-        LCDOUT $FE, 1, "Night Delay(s):"
         High lcdbacklight
         lcdon = 1
         read 3, nightDelay.byte0
         read 4, nightDelay.Byte1
         while(menuItem == 3)
-            LCDOUT $FE,$C0, #nightDelay
+            LCDOUT $FE, 1, "Night Dly(h:m):"
+            LCDOUT $FE,$C0, #nightDelay / 3600
+            LCDOUT ":"
+            LCDOUT #(nightDelay // 3600)/60
             High lcdbacklight
             pause 50
             if(sw_increase) then
-                nightdelay = nightdelay + 1
+                nightdelay = nightdelay + 60
             endif
             if(sw_decrease) then
-                nightdelay = nightdelay - 1
+                nightdelay = nightdelay - 60
             endif
             if(sw_scroll) then
                 while(sw_scroll)
@@ -350,13 +370,15 @@ menu:
     
     if(menuItem == 4) then
         ' Adjust how often we update the position
-        LCDOUT $FE, 1, "Update:(s)"
         High lcdbacklight
         lcdon = 1
         read 5, trackUpdate.byte0
         read 6, trackUpdate.Byte1
         while(menuItem == 4)
-            LCDOUT $FE,$C0, #trackUpdate
+            LCDOUT $FE, 1, "Update Rt (m:s)"
+            LCDOUT $FE,$C0, #(trackUpdate / 60)
+            LCDOUT ":"
+            LCDOUT #(trackUpdate // 60)
             High lcdbacklight
             pause 50
             if(sw_increase) then
@@ -399,7 +421,6 @@ menu:
     
     
     ENDIF
-    LCDOUT $FE, 1, "Tracking Mode:"
 Return
 
 moveSafe:
