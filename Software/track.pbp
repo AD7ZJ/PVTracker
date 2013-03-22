@@ -1,6 +1,6 @@
 '***** Designed for a PIC16F887 and built using MeLabs Pic Basic Pro v2.50 *****
 '*
-'* Version 1.0
+'* Version 1.4
 '* 
 '* Changelog:
 '* Apr 15, 2010       v0.1        Original Release
@@ -12,7 +12,9 @@
 '* Jun 19, 2011       v1.3        Fixed initialization bug, initial values are
 '*                                now loaded at boot from EEPROM
 '*                                Added moveSafe routine
+'* Sep 03, 2012       v1.4        Increased safety delay 
 '*
+'* Update firmware version and build time on line 130
 '*******************************************************************************
 
 
@@ -125,10 +127,10 @@ read 6, trackUpdate.Byte1
 Pause 500
 
 LCDOUT $FE, 1, "Booting..."
-lcdout $FE,$C0,"Firmware: v1.3"
+lcdout $FE,$C0,"Firmware: v1.4"
 Pause 4000
 LCDOUT $FE, 1, "Build date:"
-lcdout $FE,$C0,"Jun 22, 2011"
+lcdout $FE,$C0,"Sep 03, 2012"
 Pause 4000
 
 main:
@@ -411,8 +413,8 @@ moveSafe:
 		PortC = %00000101
 		Pause 100
 		
-		While (westLimit && (limcnt < 4800) && (!sw_manauto))        
-			Pause 50
+		While (westLimit && (limcnt < 9000) && (!sw_manauto))        
+			Pause 100
 			limcnt = limcnt + 1
 		Wend
 		
