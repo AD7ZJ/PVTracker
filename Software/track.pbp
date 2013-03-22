@@ -51,7 +51,7 @@ tmp             VAR     WORD
 centerTime      VAR     BYTE
 eveningDelay    VAR     WORD
 
-'Set the RIS registers.  0 = output, 1 = input
+'Set the TRIS registers.  0 = output, 1 = input
 TRISA = %00111111
 TRISB = %00000000
 TRISC = %10000000
@@ -63,7 +63,7 @@ OSCCON = %01100000
 ANSEL = %11100011
 
 'Make sure all the outputs are off to begin with
-'PORTC = %00000000
+PORTC = %00000000
 
 ' Set LCD Data port
 DEFINE LCD_DREG	PORTB
@@ -90,14 +90,15 @@ DEFINE LCD_DATAUS	50
 Define	ADC_BITS		10	' Set number of bits in result
 Define	ADC_CLOCK		3	' Set clock source (3=RC)
 Define	ADC_SAMPLEUS	200	' Set sampling time in uS
+
 ' Right-justify the ADC value
 ADCON1.7 = 1
 
 
 lcdON = 0
 trackMode = 0       ' Default to auto day-track
-trackupdate = 16000 ' Default to updating the track every half hour
-centerval = 600     ' 496 all the way west
+trackupdate = 1600  ' Default to updating the track every half hour
+centerval = 450     ' 496 all the way west
                     ' 763 all to the east
 offset = 0
 eveningdelay = 3600
@@ -105,14 +106,14 @@ nightdelay = 28800
 centerTime = 10
 timecnt = 0
 
-' Initialize the EEPROM values at compiletime
-EEPROM 0,[88]
-EEPROM 1,[2]
-EEPROM 2,[10]
-EEPROM 3,[128]
-EEPROM 4,[112]
-EEPROM 5,[64]
-EEPROM 6,[6]
+' Initialize the EEPROM values at compile time
+EEPROM 0,[194]      ' centerPos low
+EEPROM 1,[1]        ' centerPos high
+EEPROM 2,[14]       ' centerTime
+EEPROM 3,[128]      ' nightDelay low
+EEPROM 4,[112]      ' nightDelay high
+EEPROM 5,[64]       ' trackUpdate low
+EEPROM 6,[6]        ' trackupdate high
 
 ' Give everything a bit to stabilize
 Pause 500
@@ -121,8 +122,8 @@ Pause 500
 main:
     ' Initialize the low-pass filter
     ADCin 0, ledvalue
-    adcin 0, ledvalue1
-    adcin 0, ledvalue2
+    'adcin 0, ledvalue1
+    'adcin 0, ledvalue2
     
 	while(1)
 		Pause 95
@@ -245,7 +246,7 @@ menu:
             pause 100
             if(sw_scroll) then
                 while(sw_scroll)
-                    ' Wait until we let off the button
+                    ' Debounce the switch
                 wend
                 menuItem = 1
             endif
@@ -272,7 +273,7 @@ menu:
             endif
             if(sw_scroll) then
                 while(sw_scroll)
-                    ' Wait until we let off the button
+                    ' Debounce the switch
                 wend
                 menuItem = 2
             endif
@@ -282,7 +283,7 @@ menu:
     endif
     
     if(menuItem == 2) then
-        'Adjust how long it takes to run the array back to center
+        ' Adjust how long it takes to run the array back to center
         LCDOUT $FE, 1, "Center Time(s):"
         High lcdbacklight
         lcdon = 1
@@ -300,7 +301,7 @@ menu:
             endif
             if(sw_scroll) then
                 while(sw_scroll)
-                    ' Wait until we let off the button
+                    ' Debounce the switch
                 wend
                 menuItem = 3
             endif
@@ -309,7 +310,7 @@ menu:
     endif
             
     if(menuItem == 3) then
-        'Adjust the night delay
+        ' Adjust the night delay
         LCDOUT $FE, 1, "Night Delay(s):"
         High lcdbacklight
         lcdon = 1
@@ -327,7 +328,7 @@ menu:
             endif
             if(sw_scroll) then
                 while(sw_scroll)
-                    ' Wait until we let off the button
+                    ' Debounce the switch
                 wend
                 menuItem = 4
             endif
@@ -337,7 +338,7 @@ menu:
     endif
     
     if(menuItem == 4) then
-        'Adjust how often we update the array position
+        ' Adjust how often we update the position
         LCDOUT $FE, 1, "Update:(s)"
         High lcdbacklight
         lcdon = 1
@@ -355,7 +356,7 @@ menu:
             endif
             if(sw_scroll) then
                 while(sw_scroll)
-                    ' Wait until we let off the button
+                    ' Debounce the switch
                 wend
                 menuItem = 5
             endif
@@ -367,10 +368,10 @@ menu:
 Return
 	
 track:
-	ADCIN 0, ledValue		'Read ADC channel 0 (port A.0, pin 2) 
+	ADCIN 0, ledValue		' Read ADC channel 0 (port A.0, pin 2) 
 	
 	if((ledValue <= centerVal) && !westlimit) then
-        'We're pressed against the west limit switch, the sun's probably gone down
+        ' We're pressed against the west limit switch, the sun's probably gone down
         trackMode = 2
     else
         If ((ledValue - offset) > centerVal) Then	
@@ -382,7 +383,7 @@ track:
 	Endif        
 return
 
-'This routine is called by "track" and re-aligns the array with the sun	
+' This routine is called by "track" and re-aligns the array with the sun	
 moveWest:
 	'If we're not already pressed against the limit switch...
 	If(westLimit) Then
@@ -396,16 +397,7 @@ moveWest:
 		
 		While (westLimit && ((ledValue + offset) > centerVal) && (limcnt < 1200) && (!sw_manauto))
 			'Update the sensor inputs until we either hit a limit switch or re-align with the sun
-			'Low-pass filter the ADC input to reduce noise
-			ledvalue2 = ledvalue1
-            ledvalue1 = ledvalue
-            ADCIN 0, ledValue
-            if(ledValue > 450) then
-               ledvalue = (ledvalue / 3) + (ledvalue1 / 3) + (ledvalue2 / 3)
-            else
-               ledvalue = ledvalue1
-            endif
-            
+            ADCIN 0, ledValue            
 			Pause 50
 			limcnt = limcnt + 1
 		Wend
