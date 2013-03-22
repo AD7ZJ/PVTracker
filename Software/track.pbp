@@ -1,4 +1,4 @@
-'***** Designed for a PIC16F747 and built using MeLabs Pic Basic Pro v2.50 *****
+'***** Designed for a PIC16F887 and built using MeLabs Pic Basic Pro v2.50 *****
 '*
 '* Version 1.0
 '* 
@@ -7,11 +7,12 @@
 '* May 10, 2010       v0.2        Misc tweaks
 '* Jun 15, 2010       v0.3        Updated to run on new hardware
 '* Aug 20, 2010       v1.0        Fixed menus to display in the correct units
+'* Oct 03, 2010       v1.1        Updated to run on a 16F887
 '*
 '*******************************************************************************
 
 
-@ device pic16F747, INTRC_OSC_NOCLKOUT, MCLR_OFF 
+@ device pic16F887, INTRC_OSC_NOCLKOUT, MCLR_OFF 
 
 ' Inputs
 sw_scroll       var     PORTA.2
@@ -47,7 +48,7 @@ nightDelay      var     word
 trackUpdate     var     word
 timeCnt         var     word
 tmp             VAR     WORD
-centerTime      VAR     WORD
+centerTime      VAR     BYTE
 eveningDelay    VAR     WORD
 
 'Set the RIS registers.  0 = output, 1 = input
@@ -58,7 +59,8 @@ TRISD = %00110000
 OSCCON = %01100000
 
 'Set AN13 - AN2 pins as digital inputs
-ADCON1 = ADCON1 | %00001101
+'ADCON1 = ADCON1 | %00001101
+ANSEL = %11100011
 
 'Make sure all the outputs are off to begin with
 'PORTC = %00000000
@@ -100,8 +102,17 @@ centerval = 600     ' 496 all the way west
 offset = 0
 eveningdelay = 3600
 nightdelay = 28800
-centerTime = 10000
+centerTime = 10
 timecnt = 0
+
+' Initialize the EEPROM values at compiletime
+EEPROM 0,[88]
+EEPROM 1,[2]
+EEPROM 2,[10]
+EEPROM 3,[128]
+EEPROM 4,[112]
+EEPROM 5,[64]
+EEPROM 6,[6]
 
 ' Give everything a bit to stabilize
 Pause 500
@@ -114,7 +125,7 @@ main:
     adcin 0, ledvalue2
     
 	while(1)
-		Pause 100
+		Pause 95
 		if(sw_scroll) Then
 			while(sw_scroll)
 				' Wait until we let off the button
@@ -161,7 +172,7 @@ main:
         endif
         
         timecnt = timecnt + 1
-        if((timecnt > trackupdate) && (trackMode == 0)) then
+        if((timecnt > (trackupdate * 10)) && (trackMode == 0)) then
             ' Now run the main tracking routine
             gosub track
             timeCnt = 0
@@ -209,7 +220,8 @@ moveEvening:
     high pumpRelay
     pause 200
     PortC = %00000110
-    Pause centerTime
+    tmp = centerTime * 1000
+    Pause tmp
     PortC = %00000100
     Pause 2000
     PortC = %00000000
@@ -246,6 +258,8 @@ menu:
         LCDOUT $FE, 1, "Center Position:"
         High lcdbacklight
         lcdon = 1
+        read 0, centerVal.byte0
+        read 1, centerVal.Byte1
         while(menuItem == 1)
             LCDOUT $FE,$C0, #centerval
             High lcdbacklight
@@ -263,6 +277,8 @@ menu:
                 menuItem = 2
             endif
         wend
+        write 0, centerVal.BYTE0
+        WRITE 1, centerVal.BYTE1
     endif
     
     if(menuItem == 2) then
@@ -270,16 +286,17 @@ menu:
         LCDOUT $FE, 1, "Center Time(s):"
         High lcdbacklight
         lcdon = 1
+        READ 2, centerTime
+        Pause 100
         while(menuItem == 2)
-            tmp = centerTime / 1000
-            LCDOUT $FE,$C0, #tmp
+            LCDOUT $FE,$C0, #centerTime
             High lcdbacklight
             pause 50
             if(sw_increase) then
-                centertime = centerTime + 1000
+                centertime = centerTime + 1
             endif
             if(sw_decrease) then
-                centertime = centerTime - 1000
+                centertime = centerTime - 1
             endif
             if(sw_scroll) then
                 while(sw_scroll)
@@ -288,6 +305,7 @@ menu:
                 menuItem = 3
             endif
         wend
+        WRITE 2, centerTime
     endif
             
     if(menuItem == 3) then
@@ -295,6 +313,8 @@ menu:
         LCDOUT $FE, 1, "Night Delay(s):"
         High lcdbacklight
         lcdon = 1
+        read 3, nightDelay.byte0
+        read 4, nightDelay.Byte1
         while(menuItem == 3)
             LCDOUT $FE,$C0, #nightDelay
             High lcdbacklight
@@ -312,13 +332,17 @@ menu:
                 menuItem = 4
             endif
         wend
+        WRITE 3, nightDelay.byte0
+        WRITE 4, nightDelay.Byte1
     endif
     
     if(menuItem == 4) then
         'Adjust how often we update the array position
-        LCDOUT $FE, 1, "Update:(1/10s)"
+        LCDOUT $FE, 1, "Update:(s)"
         High lcdbacklight
         lcdon = 1
+        read 5, trackUpdate.byte0
+        read 6, trackUpdate.Byte1
         while(menuItem == 4)
             LCDOUT $FE,$C0, #trackUpdate
             High lcdbacklight
@@ -336,8 +360,9 @@ menu:
                 menuItem = 5
             endif
         wend
+        WRITE 5, trackUpdate.byte0
+        WRITE 6, trackUpdate.Byte1
     endif
-    
     LCDOUT $FE, 1, "Tracking Mode:"
 Return
 	
@@ -345,7 +370,7 @@ track:
 	ADCIN 0, ledValue		'Read ADC channel 0 (port A.0, pin 2) 
 	
 	if((ledValue <= centerVal) && !westlimit) then
-        'The sun's gone down and we're pressed against the west limit switch
+        'We're pressed against the west limit switch, the sun's probably gone down
         trackMode = 2
     else
         If ((ledValue - offset) > centerVal) Then	
