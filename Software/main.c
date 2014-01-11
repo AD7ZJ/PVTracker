@@ -9,6 +9,7 @@
 #include "main.h"
 
 __CONFIG(INTIO & WDTDIS & PWRTDIS & BORDIS & BORDIS & LVPDIS & DEBUGEN & DUNPROTECT & UNPROTECT);
+
 /**
  * Initialize the EEPROM to approximate values at programming time
  *
@@ -19,6 +20,8 @@ __CONFIG(INTIO & WDTDIS & PWRTDIS & BORDIS & BORDIS & LVPDIS & DEBUGEN & DUNPROT
  */
 __EEPROM_DATA(1, 194, 14, 112, 128, 7, 08, 0);
 __EEPROM_DATA(0, 0, 0, 0, 0, 0, 0, 0);
+
+static void (*selFuncPtr)(void);
 
 void init(void) {
     // port directions: 1=input, 0=output
@@ -43,6 +46,12 @@ void init(void) {
     PEIE = 1;
     TMR1IE = 1;
     GIE = 1;
+
+    // set uptime at zero
+    uptime = 0;
+    LCD_BACKLIGHT = 0;
+    buttonPress = NONE;
+    backlightOffTick = 0;
 }
 
 void main(void) {
@@ -83,6 +92,9 @@ void main(void) {
             // update the track time
             if (--trackCounter == 0) {
                 // update the track
+                //-track();
+
+                // reset the count
                 trackCounter = updateTime;
             }
 
@@ -94,6 +106,10 @@ void main(void) {
 }
 
 void ButtonHandler() {
+    // any button press will keep the backlight on
+    if (buttonPress != NONE)
+        backlightOffTick = systemTick + 10000;
+
     switch (buttonPress) {
         case SCROLL:
             // clear the modify pointer
@@ -108,19 +124,23 @@ void ButtonHandler() {
 
             // update the display
             menu(&page);
-            backlightOffTick = systemTick + 10000;
+            
             break;
 
         case INCREASE:
             IncreaseValue(varToModify);
             buttonPress = NONE;
-            backlightOffTick = systemTick + 10000;
             break;
 
         case DECREASE:
             DecreaseValue(varToModify);
             buttonPress = NONE;
-            backlightOffTick = systemTick + 10000;
+            break;
+
+        case SELECT:
+            // run whatever the function pointer is pointing at
+            //if(selFuncPtr)
+            //    selFuncPtr();
             break;
     }
 }
@@ -231,6 +251,7 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "Moves in: %02d:%02d", (trackCounter / 60), (trackCounter % 60));
             lcd_puts((char *) display_out);
             break;
+
         case ADC_PAGE:
             // read the value on ADC0
             ad_in = readAdc(0);
@@ -239,6 +260,7 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "%d", ad_in);
             lcd_puts((char *) display_out);
             break;
+
         case CENTER_POS:
             // setup the centerPosition variable to be modified
             varToModify = &centerPosition;
@@ -247,6 +269,7 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "%d", centerPosition);
             lcd_puts((char *) display_out);
             break;
+
         case UPDATE_TIME:
             // setup the updateTime variable to be modified
             varToModify = &updateTime;
@@ -255,6 +278,7 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "%02d:%02d", updateTime / 60, updateTime % 60);
             lcd_puts((char *) display_out);
             break;
+
         case NIGHT_DELAY:
             // setup the nightDelay variable to be modified
             varToModify = &nightDelay;
@@ -263,6 +287,7 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "%02d:%02d:%02d", (nightDelay / 3600), (nightDelay % 3600)/60, (nightDelay % 3600) % 60);
             lcd_puts((char *) display_out);
             break;
+
         case CENTER_TIME:
             // setup the centerTime variable to be modified
             varToModify = (uint16_t*)&centerTime;
@@ -271,11 +296,26 @@ void menu(MENU_PAGE_T * page) {
             sprintf(display_out, "%02d:%02d", centerTime / 60, centerTime % 60);
             lcd_puts((char *) display_out);
             break;
+
         case MOVE_SAFE:
             // setup the centerTime variable to be modified
             lcd_puts("Press 'select'");
             lcd_goto(40);
             lcd_puts("to move safe.");
+            break;
+
+        case PUMP_TIME:
+            lcd_puts("Total Pump time:");
+            lcd_goto(40);
+            sprintf(display_out, "%02d:%02d", pumpTime / 60, pumpTime % 60);
+            lcd_puts((char *) display_out);
+            break;
+
+        case UPTIME:
+            lcd_puts("System Uptime:");
+            lcd_goto(40);
+            sprintf(display_out, "%02d", uptime);
+            lcd_puts((char *) display_out);
             break;
     }
 }
@@ -325,6 +365,7 @@ interrupt isr(void) {
         // update second counter
         if (msElapsed++ >= 1000) {
             secFlag = 1;
+            uptime++;
             msElapsed = 0;
         }
         

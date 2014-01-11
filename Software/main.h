@@ -11,9 +11,9 @@ typedef unsigned long uint32_t;
 typedef long int32_t;
 
 // timing flags
-uint8_t secFlag;
-uint16_t msElapsed;
-uint32_t systemTick;
+volatile uint8_t secFlag;
+volatile uint16_t msElapsed;
+volatile uint32_t systemTick;
 uint32_t backlightOffTick;
 
 // display buffer
@@ -43,6 +43,8 @@ typedef enum {
     NIGHT_DELAY = 4,
     CENTER_TIME = 5,
     MOVE_SAFE = 6,
+    PUMP_TIME = 7,
+    UPTIME = 8,
     END
 } MENU_PAGE_T;
 
@@ -77,6 +79,9 @@ uint16_t updateTime;
 
 // total time in s the pump has been running
 uint32_t pumpTime;
+
+// system uptime in seconds
+volatile uint32_t uptime;
 
 void menu(MENU_PAGE_T * page);
 void ReadEEProm();
