@@ -26,7 +26,8 @@ static unsigned char dummy;
 /**
  * Initializes the onboard serial port hardware
  */
-void SerialInit(void) {
+void SerialInit(void) 
+{
     SPBRG = DIVIDER;    //using the baudrate generator in 8-bit mode
     BRGH  = HIGH_SPEED; //data rate for sending
     SYNC  = 0; //asynchronous

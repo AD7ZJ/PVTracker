@@ -1,9 +1,12 @@
 #include <xc.h>
 #include <stdbool.h>
 #include "adxl345.h"
+#include <stdio.h>
 
 #define REG_POWER_CTL   0x2D
+#define REG_DATA_FORMAT 0x31
 #define REG_X_DATA      0x32
+#define _XTAL_FREQ      16000000
 
 static void Adxl345SS(bool level);
 void Adxl345WriteReg(uint8_t reg, uint8_t data);
@@ -33,7 +36,9 @@ void Adxl345Init()
     // enable the SPI driver
     SSPCON1bits.SSPEN = 1;
     
-    // start measurments
+    // Ensure default data format
+    Adxl345WriteReg(REG_DATA_FORMAT, 0x00);
+    // start measurements
     Adxl345WriteReg(REG_POWER_CTL, 0x08);
 }
 
@@ -42,6 +47,19 @@ uint8_t Adxl345SpiXfr(uint8_t dat)
     SSPBUF = dat;
     while (!SSPSTATbits.BF);
     return (uint8_t) SSPBUF;
+}
+
+static void Adxl345SS(bool level)
+{
+    // RC6 is connected to the CS pin on the adxl345
+    if (level)
+    {
+        PORTC |= 1u << 6;
+    }
+    else
+    {
+        PORTC &= ~(1u << 6);
+    }
 }
 
 void Adxl345WriteReg(uint8_t reg, uint8_t data)
@@ -105,15 +123,37 @@ void Adxl345ReadData(int16_t* xyz)
     Adxl345SS(true);
 }
 
-static void Adxl345SS(bool level)
+bool Adxl345SelfTest(void)
 {
-    // RC6 is connected to the CS pin on the adxl345
-    if (level)
-    {
-        PORTC |= 1u << 6;
-    }
-    else
-    {
-        PORTC &= ~(1u << 6);
-    }
+    bool result = true;
+    int16_t initialReading[3];
+    int16_t selfTestReading[3];
+    // make sure any prior test mode effects are gone
+    __delay_ms(50);
+    // take initial reading
+    Adxl345ReadData(initialReading);
+    // enable self test
+    Adxl345WriteReg(REG_DATA_FORMAT, 0x80);
+    __delay_ms(50);
+    // take another reading
+    Adxl345ReadData(selfTestReading);
+    // turn off self test
+    Adxl345WriteReg(REG_DATA_FORMAT, 0x00);
+    __delay_ms(50);
+    
+    // X should have moved approx 1g positive, 512 represents approx 2g on this range 
+    if (selfTestReading[0] - initialReading[0] < 100)
+        result = false;
+    // Y should have moved approx 1g negative
+    if (selfTestReading[1] - initialReading[1] > -100)
+        result = false;
+    // Z should have moved approx 1g positive
+    if (selfTestReading[2] - initialReading[2] < 100)
+        result = false;
+    
+    //printf("Initial X:%d Y:%d Z:%d\r\n", initialReading[0], initialReading[1], initialReading[2]);
+    //printf("Test X:%d Y:%d Z:%d\r\n", selfTestReading[0], selfTestReading[1], selfTestReading[2]);
+    
+    return result;
 }
+

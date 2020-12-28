@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <xc.h>
 #include <stdio.h>
 
@@ -63,11 +64,11 @@
 // CONFIG7H
 #pragma config EBTRB = OFF          // Boot Block Table Read Protection bit->Boot block not protected from table reads executed in other blocks
 
-uint32_t sysTick = 0;
+/****** Global Vars *******/
+uint32_t gSysTick = 0;
+bool gSelfTestResult = false;
 
-/*
-                         Main application
- */
+
 void main(void)
 {
     // SCS0 INTOSC; IDLEN disabled; IRCF 16MHz_HF; 
@@ -96,10 +97,10 @@ void main(void)
     // enable its interrupt
     TMR1IE = 0x01;
 
-    // put the 485 driver in tx
+    // put the 485 driver in tx mode
     PORTC |= 1u << 0;
     
-    // GIE, PEIE Interrupts
+    // Global interrupt, peripheral interrupt enable
     INTCON = 0b11000000;
     //RCIE = 0x01;
     
@@ -108,14 +109,23 @@ void main(void)
     
     int16_t xyz[3];
     
-    SerialPutst("Booted\r\n");
+    gSelfTestResult = Adxl345SelfTest();
+    
+    if (gSelfTestResult)
+    {
+        printf("Sensor passed self test\r\n");
+    }
+    else
+    {
+        printf("Sensor failed self test\r\n");
+    }
     
     while (1)
     {
-        if (sysTick >= 10)
+        if (gSysTick >= 10)
         {
            PORTC ^= 1u << 3;
-           sysTick = 0;
+           gSysTick = 0;
            Adxl345ReadData(xyz);
            printf("X:%d Y:%d Z:%d\r\n", xyz[0], xyz[1], xyz[2]);
         }
@@ -149,7 +159,7 @@ void __interrupt() intVector(void)
         // we need to divide 1 Mhz by 50,000 to get a 20ms tick. So, reload 65535-50000=0x3CAF
         TMR1H = 0x3C;
         TMR1L = 0xAF;
-        sysTick++;
+        gSysTick++;
     }
 }
 

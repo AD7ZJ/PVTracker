@@ -28,11 +28,14 @@
 #define ADXL345_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 void Adxl345Init();
 
 uint8_t Adxl345ReadReg(uint8_t reg);
 
 void Adxl345ReadData(int16_t* xyz);
+
+bool Adxl345SelfTest(void);
 
 #endif /* ADXL345_H */
