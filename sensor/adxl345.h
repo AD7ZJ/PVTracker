@@ -33,4 +33,6 @@ void Adxl345Init();
 
 uint8_t Adxl345ReadReg(uint8_t reg);
 
+void Adxl345ReadData(int16_t* xyz);
+
 #endif /* ADXL345_H */
