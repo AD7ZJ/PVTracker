@@ -65,7 +65,9 @@
 #pragma config EBTRB = OFF          // Boot Block Table Read Protection bit->Boot block not protected from table reads executed in other blocks
 
 /****** Global Vars *******/
-uint32_t gSysTick = 0;
+uint32_t gHeartbeatTic = 0;
+uint32_t gMsgTic = 0;
+uint32_t gSelfTestTic = 0;
 bool gSelfTestResult = false;
 
 
@@ -122,12 +124,22 @@ void main(void)
     
     while (1)
     {
-        if (gSysTick >= 10)
+        if (gHeartbeatTic >= 10)
         {
            PORTC ^= 1u << 3;
-           gSysTick = 0;
-           Adxl345ReadData(xyz);
-           printf("X:%d Y:%d Z:%d\r\n", xyz[0], xyz[1], xyz[2]);
+           gHeartbeatTic = 0;
+        }
+        if (gMsgTic >= 5)
+        {
+            Adxl345ReadData(xyz);
+            printf("X:%d Y:%d Z:%d S:%d\r\n", xyz[0], xyz[1], xyz[2], gSelfTestResult);
+            gMsgTic = 0;
+        }
+        // every minute
+        if (gSelfTestTic >= 1200)
+        {
+            gSelfTestResult = Adxl345SelfTest();
+            gSelfTestTic = 0;
         }
     }
 }
@@ -159,7 +171,9 @@ void __interrupt() intVector(void)
         // we need to divide 1 Mhz by 50,000 to get a 20ms tick. So, reload 65535-50000=0x3CAF
         TMR1H = 0x3C;
         TMR1L = 0xAF;
-        gSysTick++;
+        gHeartbeatTic++;
+        gMsgTic++;
+        gSelfTestTic++;
     }
 }
 
