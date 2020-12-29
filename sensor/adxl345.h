@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- * Filename:     adxl345.h                                                     *
+ * Filename:     adxl345.h                                                 *
  *                                                                         *
  ***************************************************************************/
 
@@ -30,9 +30,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-void Adxl345Init();
-
-uint8_t Adxl345ReadReg(uint8_t reg);
+void Adxl345Init(void);
 
 void Adxl345ReadData(int16_t* xyz);
 

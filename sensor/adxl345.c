@@ -1,7 +1,31 @@
+/***************************************************************************
+ *                                                                         *
+ *  This program is free software; you can redistribute it and/or modify   *
+ *  it under the terms of the GNU General Public License as published by   *
+ *  the Free Software Foundation; either version 2 of the License, or      *
+ *  (at your option) any later version.                                    *
+ *                                                                         *
+ *  This program is distributed in the hope that it will be useful,        *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          *
+ *  GNU General Public License for more details.                           *
+ *                                                                         *
+ *  You should have received a copy of the GNU General Public License      *
+ *  along with this program; if not, write to the Free Software            *
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111 USA    *
+ *                                                                         *
+ ***************************************************************************
+ *                                                                         *
+ *               (c) Copyright, 2020, AD7ZJ                                *
+ *                                                                         *
+ ***************************************************************************
+ *                                                                         *
+ * Filename:     adxl345.c                                                 *
+ *                                                                         *
+ ***************************************************************************/
+
 #include <xc.h>
-#include <stdbool.h>
 #include "adxl345.h"
-#include <stdio.h>
 
 #define REG_POWER_CTL   0x2D
 #define REG_DATA_FORMAT 0x31
@@ -9,8 +33,13 @@
 #define _XTAL_FREQ      16000000
 
 static void Adxl345SS(bool level);
-void Adxl345WriteReg(uint8_t reg, uint8_t data);
+static void Adxl345WriteReg(uint8_t reg, uint8_t data);
+static uint8_t Adxl345ReadReg(uint8_t reg);
+static uint8_t Adxl345SpiXfr(uint8_t dat);
 
+/**
+ * Initialize the ADXL345 driver. Initializes the SPI hardware and required pins. 
+ */
 void Adxl345Init()
 {
     // disable the SPI driver
@@ -42,7 +71,7 @@ void Adxl345Init()
     Adxl345WriteReg(REG_POWER_CTL, 0x08);
 }
 
-uint8_t Adxl345SpiXfr(uint8_t dat) 
+static uint8_t Adxl345SpiXfr(uint8_t dat) 
 {
     SSPBUF = dat;
     while (!SSPSTATbits.BF);
@@ -62,7 +91,7 @@ static void Adxl345SS(bool level)
     }
 }
 
-void Adxl345WriteReg(uint8_t reg, uint8_t data)
+static void Adxl345WriteReg(uint8_t reg, uint8_t data)
 {
     uint8_t addrByte = 0;
     addrByte = reg & 0x3F;
@@ -77,7 +106,7 @@ void Adxl345WriteReg(uint8_t reg, uint8_t data)
     Adxl345SS(true);
 }
 
-uint8_t Adxl345ReadReg(uint8_t reg)
+static uint8_t Adxl345ReadReg(uint8_t reg)
 {
     uint8_t addrByte = 0;
     uint8_t dataByte = 0;
@@ -95,6 +124,11 @@ uint8_t Adxl345ReadReg(uint8_t reg)
     return dataByte;
 }
 
+/**
+ * Read the X/Y/Z accel data from the part. 
+ *
+ * @param xyz Pointer to an array of 3 16 bit values. Result will be stored in order of X-Y-Z. 
+ */
 void Adxl345ReadData(int16_t* xyz)
 {
     uint8_t addrByte = 0;
@@ -123,6 +157,11 @@ void Adxl345ReadData(int16_t* xyz)
     Adxl345SS(true);
 }
 
+/**
+ * Execute the self-test. Blocks for around 150ms. 
+ * 
+ * @return True if test passed, false otherwise. 
+ */
 bool Adxl345SelfTest(void)
 {
     bool result = true;
@@ -150,9 +189,6 @@ bool Adxl345SelfTest(void)
     // Z should have moved approx 1g positive
     if (selfTestReading[2] - initialReading[2] < 100)
         result = false;
-    
-    //printf("Initial X:%d Y:%d Z:%d\r\n", initialReading[0], initialReading[1], initialReading[2]);
-    //printf("Test X:%d Y:%d Z:%d\r\n", selfTestReading[0], selfTestReading[1], selfTestReading[2]);
     
     return result;
 }

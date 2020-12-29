@@ -1,3 +1,29 @@
+/***************************************************************************
+ *                                                                         *
+ *  This program is free software; you can redistribute it and/or modify   *
+ *  it under the terms of the GNU General Public License as published by   *
+ *  the Free Software Foundation; either version 2 of the License, or      *
+ *  (at your option) any later version.                                    *
+ *                                                                         *
+ *  This program is distributed in the hope that it will be useful,        *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          *
+ *  GNU General Public License for more details.                           *
+ *                                                                         *
+ *  You should have received a copy of the GNU General Public License      *
+ *  along with this program; if not, write to the Free Software            *
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111 USA    *
+ *                                                                         *
+ ***************************************************************************
+ *                                                                         *
+ *               (c) Copyright, 2020, AD7ZJ                                *
+ *                                                                         *
+ ***************************************************************************
+ *                                                                         *
+ * Filename:     main.c                                                    *
+ *                                                                         *
+ ***************************************************************************/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <xc.h>
@@ -6,9 +32,7 @@
 #include "serial.h"
 #include "adxl345.h"
 
-/*
- * Config settings
- */
+
 // CONFIG1L
 #pragma config CPUDIV = NOCLKDIV    // CPU System Clock Selection bits->No CPU System Clock divide
 #pragma config USBDIV = OFF         // USB Clock Selection bit->USB clock comes directly from the OSC1/OSC2 oscillator block; no divide
@@ -65,7 +89,6 @@
 #pragma config EBTRB = OFF          // Boot Block Table Read Protection bit->Boot block not protected from table reads executed in other blocks
 
 /****** Global Vars *******/
-uint32_t gHeartbeatTic = 0;
 uint32_t gMsgTic = 0;
 uint32_t gSelfTestTic = 0;
 bool gSelfTestResult = false;
@@ -104,7 +127,6 @@ void main(void)
     
     // Global interrupt, peripheral interrupt enable
     INTCON = 0b11000000;
-    //RCIE = 0x01;
     
     SerialInit();
     Adxl345Init();
@@ -124,15 +146,12 @@ void main(void)
     
     while (1)
     {
-        if (gHeartbeatTic >= 10)
-        {
-           PORTC ^= 1u << 3;
-           gHeartbeatTic = 0;
-        }
         if (gMsgTic >= 5)
         {
+            PORTC |= 1u << 3;
             Adxl345ReadData(xyz);
             printf("X:%d Y:%d Z:%d S:%d\r\n", xyz[0], xyz[1], xyz[2], gSelfTestResult);
+            PORTC &= ~(1u << 3);
             gMsgTic = 0;
         }
         // every minute
@@ -171,7 +190,6 @@ void __interrupt() intVector(void)
         // we need to divide 1 Mhz by 50,000 to get a 20ms tick. So, reload 65535-50000=0x3CAF
         TMR1H = 0x3C;
         TMR1L = 0xAF;
-        gHeartbeatTic++;
         gMsgTic++;
         gSelfTestTic++;
     }
