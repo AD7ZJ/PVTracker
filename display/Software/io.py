@@ -29,6 +29,8 @@ class Sensor:
         self.minZ = 0
         self.cal = Calibration()
         self.LoadCalibration()
+        self.theta = 0.0
+        self.psi = 0.0
 
     def SaveCalibration(self):
         self.cal.maxX = self.maxX
@@ -41,12 +43,12 @@ class Sensor:
         print("Y: %f, %f" % (self.cal.minY, self.cal.maxY))
         print("Z: %f, %f" % (self.cal.minZ, self.cal.maxZ))
         self.cal.minZ
-        f = open('cal.txt', 'wb')
+        f = open('cal.dat', 'wb')
         pickle.dump(self.cal, f)
         f.close()
 
     def LoadCalibration(self):
-        f = open('cal.txt', 'rb')
+        f = open('cal.dat', 'rb')
         self.cal = pickle.load(f)
         f.close()
 
@@ -99,9 +101,9 @@ class Sensor:
                 sign = 1
                 if (z < 0):
                     sign = -1;
-                theta = (math.atan2(-x, math.sqrt((y*y)+(z*z))) * 180) / 3.14159;
-                psi = (math.atan2(y, sign*math.sqrt((z*z)+0.1*(x*x))) * 180) / 3.14159;
-                print("theta %f psi %f\r\n" % (theta, psi))
+                self.theta = (math.atan2(-x, math.sqrt((y*y)+(z*z))) * 180) / 3.14159;
+                self.phi = (math.atan2(y, sign*math.sqrt((z*z)+0.1*(x*x))) * 180) / 3.14159;
+                print("theta %f phi %f\r\n" % (self.theta, self.phi))
             except:
                 #raise
                 pass
