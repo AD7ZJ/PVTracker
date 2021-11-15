@@ -19,11 +19,17 @@ class MenuBase:
     def __init__(self, iface):
         self.iface = iface
 
-    def BtnIncreasePressed(self):
-        print("Home Increased!")
+    def BtnDnIncrease(self):
+        print("Inc Down!")
 
-    def BtnDecreasePressed(self):
-        print("Decreased!")
+    def BtnUpIncrease(self):
+        print("Inc Up!")
+
+    def BtnDnDecrease(self):
+        print("Dec Down!")
+
+    def BtnUpDecrease(self):
+        print("Dec Up!")
 
     def BtnTrackPressed(self):
         print("Track!")
@@ -58,10 +64,12 @@ class Tracker:
         self.pumpRunning = False
         self.manualMode = False
         self.iface = iface
-        self.iface.btnIncreaseCb = self.BtnIncreasePressed
-        self.iface.btnDecreaseCb = self.BtnDecreasePressed
+        self.iface.btnDnIncreaseCb = lambda: self.menu.BtnDnIncrease()
+        self.iface.btnUpIncreaseCb = lambda: self.menu.BtnUpIncrease()
+        self.iface.btnDnDecreaseCb = lambda: self.menu.BtnDnDecrease()
+        self.iface.btnUpDecreaseCb = lambda: self.menu.BtnUpDecrease()
+        self.iface.btnTrackCb = lambda: self.menu.BtnTrackPressed()
         self.iface.btnMenuCb = self.BtnMenuPressed
-        self.iface.btnTrackCb = self.BtnTrackPressed
         self.menus = [globals()["MenuHome"], 
                       globals()["MenuMoveSafe"],
                       globals()["MenuRuntime"]]
@@ -84,21 +92,12 @@ class Tracker:
             self.iface.SolenoidWest(False)
             self.iface.SolenoidEast(enable)
 
-    def BtnIncreasePressed(self):
-        self.menu.BtnIncreasePressed()
-
-    def BtnDecreasePressed(self):
-        self.menu.BtnDecreasePressed()
-
     def BtnMenuPressed(self):
         self.menuItem += 1
         if (self.menuItem >= len(self.menus)):
             self.menuItem = 0
         # create new menu object
         self.menu = self.menus[self.menuItem](self.iface)
-
-    def BtnTrackPressed(self):
-        self.menu.BtnTrackPressed()
 
 
     def WorkerThread(self):

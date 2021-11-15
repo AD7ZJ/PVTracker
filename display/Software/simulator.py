@@ -11,8 +11,10 @@ class TrackerSim:
         self.lcdText = ""
         self.lcdLine1 = ""
         self.lcdLine2 = ""
-        self.btnIncreaseCb = None
-        self.btnDecreaseCb = None
+        self.btnDnIncreaseCb = None
+        self.btnUpIncreaseCb = None
+        self.btnDnDecreaseCb = None
+        self.btnUpDecreaseCb = None
         self.btnMenuCb = None
         self.btnTrackCb = None
 
@@ -40,18 +42,18 @@ class TrackerSim:
     def WestLimit(self):
         return self.westLimit
 
-    def BtnIncPressed(self):
-        self.btnIncreaseCb()
-
-    def BtnDecPressed(self):
-        self.btnDecreaseCb()
-
     def BtnMenuPressed(self):
         self.btnMenuCb()
 
     def BtnTrackPressed(self):
         self.btnTrackCb()
 
+
+def PrintPressed(event):
+    print("Pressed")
+
+def PrintReleased(event):
+    print("released")
 
 if __name__ == '__main__':
     hwSim = TrackerSim()
@@ -80,8 +82,9 @@ if __name__ == '__main__':
         width=6,
         height=3,
         fg="black",
-        command=hwSim.BtnIncPressed,
     )
+    incBtn.bind('<ButtonPress-1>', lambda event: hwSim.btnDnIncreaseCb())
+    incBtn.bind('<ButtonRelease-1>', lambda event: hwSim.btnUpIncreaseCb())
     incBtn.pack()
 
     decBtn = tk.Button(
@@ -90,8 +93,9 @@ if __name__ == '__main__':
         width=6,
         height=3,
         fg="black",
-        command=hwSim.BtnDecPressed,
     )
+    decBtn.bind('<ButtonPress-1>', lambda event: hwSim.btnDnDecreaseCb())
+    decBtn.bind('<ButtonRelease-1>', lambda event: hwSim.btnUpDecreaseCb())
     decBtn.pack()
 
     menuBtn = tk.Button(
