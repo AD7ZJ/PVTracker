@@ -3,6 +3,51 @@ import datetime
 import pysolar
 import time
 import threading
+import enum
+
+class Menus(enum.Enum):
+    Home = 0
+    MoveSafe = 1
+    RunTime = 2
+    Setup = 3
+    DateSet = 4
+    TimeSet = 5
+    LattitudeSet = 6
+    LongitudeSet = 7
+
+class MenuBase:
+    def __init__(self, iface):
+        self.iface = iface
+
+    def BtnIncreasePressed(self):
+        print("Home Increased!")
+
+    def BtnDecreasePressed(self):
+        print("Decreased!")
+
+    def BtnTrackPressed(self):
+        print("Track!")
+
+class MenuHome(MenuBase):
+    def __init__(self, iface):
+        super().__init__(iface)
+        self.iface.Display("Tracking home", 1)
+        self.iface.Display("", 2)
+
+
+class MenuMoveSafe(MenuBase):
+    def __init__(self, iface):
+        super().__init__(iface)
+        self.iface.Display("Press Track to", 1)
+        self.iface.Display("move safe.", 2)
+
+class MenuRuntime(MenuBase):
+    def __init__(self, iface):
+        super().__init__(iface)
+        self.iface.Display("Accum Runtime:", 1)
+        self.iface.Display("10:05:31", 2)
+
+
 
 class Tracker:
     def __init__(self, lattitude, longitude, iface):
@@ -17,6 +62,15 @@ class Tracker:
         self.iface.btnDecreaseCb = self.BtnDecreasePressed
         self.iface.btnMenuCb = self.BtnMenuPressed
         self.iface.btnTrackCb = self.BtnTrackPressed
+        self.menus = [globals()["MenuHome"], 
+                      globals()["MenuMoveSafe"],
+                      globals()["MenuRuntime"]]
+        self.menuItem = 0
+
+        # create the first menu
+        self.menu = self.menus[0](self.iface)
+
+
 
     def MoveArray(self, dirWest, enable):
         if (enable and not(self.pumpRunning)):
@@ -31,16 +85,21 @@ class Tracker:
             self.iface.SolenoidEast(enable)
 
     def BtnIncreasePressed(self):
-        print("Increased!")
+        self.menu.BtnIncreasePressed()
 
     def BtnDecreasePressed(self):
-        print("Decreased!")
+        self.menu.BtnDecreasePressed()
 
     def BtnMenuPressed(self):
-        print("Menu!")
+        self.menuItem += 1
+        if (self.menuItem >= len(self.menus)):
+            self.menuItem = 0
+        # create new menu object
+        self.menu = self.menus[self.menuItem](self.iface)
 
     def BtnTrackPressed(self):
-        print("Track!")
+        self.menu.BtnTrackPressed()
+
 
     def WorkerThread(self):
 
@@ -49,7 +108,7 @@ class Tracker:
                 #if (self.manualMode):
 
                 #else:
-                self.iface.Display("Tracker test", 1)
+                #self.MenuHandler()
                 time.sleep(1)
 
                 # if it's time to update the position
