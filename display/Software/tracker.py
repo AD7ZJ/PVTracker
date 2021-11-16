@@ -16,8 +16,9 @@ class Menus(enum.Enum):
     LongitudeSet = 7
 
 class MenuBase:
-    def __init__(self, iface):
-        self.iface = iface
+    def __init__(self, tracker):
+        self.tracker = tracker
+        self.iface = tracker.iface
 
     def BtnDnIncrease(self):
         print("Inc Down!")
@@ -35,25 +36,60 @@ class MenuBase:
         print("Track!")
 
 class MenuHome(MenuBase):
-    def __init__(self, iface):
-        super().__init__(iface)
+    def __init__(self, tracker):
+        super().__init__(tracker)
         self.iface.Display("Tracking home", 1)
         self.iface.Display("", 2)
 
 
 class MenuMoveSafe(MenuBase):
-    def __init__(self, iface):
-        super().__init__(iface)
+    def __init__(self, tracker):
+        super().__init__(tracker)
         self.iface.Display("Press Track to", 1)
         self.iface.Display("move safe.", 2)
 
 class MenuRuntime(MenuBase):
-    def __init__(self, iface):
-        super().__init__(iface)
+    def __init__(self, tracker):
+        super().__init__(tracker)
         self.iface.Display("Accum Runtime:", 1)
         self.iface.Display("10:05:31", 2)
 
+class MenuSetupMode(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Setup Menus?", 1)
+        self.DisplayEnabled()
 
+    def DisplayEnabled(self):
+        if (self.tracker.setupMode):
+            self.iface.Display("Yes", 2)
+        else:
+            self.iface.Display("No", 2)
+
+    def BtnUpIncrease(self):
+        self.tracker.setupMode = not(self.tracker.setupMode)
+        self.DisplayEnabled()
+
+    def BtnUpDecrease(self):
+        self.tracker.setupMode = not(self.tracker.setupMode)
+        self.DisplayEnabled()
+
+class MenuDateSetYear(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Year:", 1)
+        self.DisplayYear()
+
+    def DisplayYear(self):
+        self.iface.Display("%d" % (self.tracker.year), 2)
+
+    def BtnUpIncrease(self):
+        self.tracker.year += 1
+        self.DisplayYear()
+
+    def BtnUpDecrease(self):
+        self.tracker.year -= 1
+        self.DisplayYear()
 
 class Tracker:
     def __init__(self, lattitude, longitude, iface):
@@ -72,11 +108,20 @@ class Tracker:
         self.iface.btnMenuCb = self.BtnMenuPressed
         self.menus = [globals()["MenuHome"], 
                       globals()["MenuMoveSafe"],
-                      globals()["MenuRuntime"]]
+                      globals()["MenuRuntime"],
+                      globals()["MenuSetupMode"],
+                      globals()["MenuDateSetYear"]]
         self.menuItem = 0
 
         # create the first menu
-        self.menu = self.menus[0](self.iface)
+        self.menu = self.menus[0](self)
+
+        self.setupMode = False
+        self.year = 2021
+        self.month = 10
+        self.day = 10
+        self.hour = 0
+        self.minute = 0
 
 
 
@@ -97,7 +142,7 @@ class Tracker:
         if (self.menuItem >= len(self.menus)):
             self.menuItem = 0
         # create new menu object
-        self.menu = self.menus[self.menuItem](self.iface)
+        self.menu = self.menus[self.menuItem](self)
 
 
     def WorkerThread(self):
