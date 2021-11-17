@@ -20,17 +20,11 @@ class MenuBase:
         self.tracker = tracker
         self.iface = tracker.iface
 
-    def BtnDnIncrease(self):
-        print("Inc Down!")
+    def BtnIncPressed(self):
+        print("Inc!")
 
-    def BtnUpIncrease(self):
-        print("Inc Up!")
-
-    def BtnDnDecrease(self):
-        print("Dec Down!")
-
-    def BtnUpDecrease(self):
-        print("Dec Up!")
+    def BtnDecPressed(self):
+        print("Dec!")
 
     def BtnTrackPressed(self):
         print("Track!")
@@ -66,11 +60,11 @@ class MenuSetupMode(MenuBase):
         else:
             self.iface.Display("No", 2)
 
-    def BtnUpIncrease(self):
+    def BtnIncPressed(self):
         self.tracker.setupMode = not(self.tracker.setupMode)
         self.DisplayEnabled()
 
-    def BtnUpDecrease(self):
+    def BtnDecPressed(self):
         self.tracker.setupMode = not(self.tracker.setupMode)
         self.DisplayEnabled()
 
@@ -83,11 +77,11 @@ class MenuDateSetYear(MenuBase):
     def DisplayYear(self):
         self.iface.Display("%d" % (self.tracker.year), 2)
 
-    def BtnUpIncrease(self):
+    def BtnIncPressed(self):
         self.tracker.year += 1
         self.DisplayYear()
 
-    def BtnUpDecrease(self):
+    def BtnDecPressed(self):
         self.tracker.year -= 1
         self.DisplayYear()
 
@@ -100,10 +94,8 @@ class Tracker:
         self.pumpRunning = False
         self.manualMode = False
         self.iface = iface
-        self.iface.btnDnIncreaseCb = lambda: self.menu.BtnDnIncrease()
-        self.iface.btnUpIncreaseCb = lambda: self.menu.BtnUpIncrease()
-        self.iface.btnDnDecreaseCb = lambda: self.menu.BtnDnDecrease()
-        self.iface.btnUpDecreaseCb = lambda: self.menu.BtnUpDecrease()
+        self.iface.btnIncreaseCb = lambda: self.menu.BtnIncPressed()
+        self.iface.btnDecreaseCb = lambda: self.menu.BtnDecPressed()
         self.iface.btnTrackCb = lambda: self.menu.BtnTrackPressed()
         self.iface.btnMenuCb = self.BtnMenuPressed
         self.menus = [globals()["MenuHome"], 
