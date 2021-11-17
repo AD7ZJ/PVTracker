@@ -85,6 +85,86 @@ class MenuDateSetYear(MenuBase):
         self.tracker.year -= 1
         self.DisplayYear()
 
+class MenuDateSetMonth(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Month:", 1)
+        self.DisplayMonth()
+
+    def DisplayMonth(self):
+        self.iface.Display("%d" % (self.tracker.month), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.month += 1
+        self.DisplayMonth()
+
+    def BtnDecPressed(self):
+        self.tracker.month -= 1
+        self.DisplayMonth()
+
+class MenuDateSetDay(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Day:", 1)
+        self.DisplayDay()
+
+    def DisplayDay(self):
+        self.iface.Display("%d" % (self.tracker.day), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.day += 1
+        if (self.tracker.day > 31):
+            self.tracker.day = 1
+        self.DisplayDay()
+
+    def BtnDecPressed(self):
+        self.tracker.day -= 1
+        if (self.tracker.day < 1):
+            self.tracker.day = 31
+        self.DisplayDay()
+
+class MenuDateSetHour(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Hour:", 1)
+        self.DisplayHour()
+
+    def DisplayHour(self):
+        self.iface.Display("%d" % (self.tracker.hour), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.hour += 1
+        if (self.tracker.hour > 23):
+            self.tracker.hour = 0
+        self.DisplayHour()
+
+    def BtnDecPressed(self):
+        self.tracker.hour -= 1
+        if (self.tracker.hour < 0):
+            self.tracker.hour = 23
+        self.DisplayHour()
+
+class MenuDateSetMin(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Minute:", 1)
+        self.DisplayMin()
+
+    def DisplayMin(self):
+        self.iface.Display("%d" % (self.tracker.minute), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.minute += 1
+        if (self.tracker.minute > 59):
+            self.tracker.minute = 0
+        self.DisplayMin()
+
+    def BtnDecPressed(self):
+        self.tracker.minute -= 1
+        if (self.tracker.minute < 0):
+            self.tracker.minute = 59
+        self.DisplayMin()
+
 class Tracker:
     def __init__(self, lattitude, longitude, iface):
         """Constructor"""
@@ -102,7 +182,12 @@ class Tracker:
                       globals()["MenuMoveSafe"],
                       globals()["MenuRuntime"],
                       globals()["MenuSetupMode"],
-                      globals()["MenuDateSetYear"]]
+                      globals()["MenuDateSetYear"],
+                      globals()["MenuDateSetMonth"],
+                      globals()["MenuDateSetDay"],
+                      globals()["MenuDateSetHour"],
+                      globals()["MenuDateSetMin"],
+                     ]
         self.menuItem = 0
 
         # create the first menu
