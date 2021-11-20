@@ -33,8 +33,11 @@ class TrackerSim:
         rightBar = tk.Frame(self.window)
         rightBar.grid(row=1, column=2)
 
-        lowerBar = tk.Frame(self.window)
-        lowerBar.grid(row=2, column=1, columnspan=2)
+        bar1 = tk.Frame(self.window)
+        bar1.grid(row=2, column=1, columnspan=2)
+
+        bar2 = tk.Frame(self.window)
+        bar2.grid(row=3, column=1, columnspan=2)
 
         incBtn = tk.Button(
             rightBar,
@@ -59,24 +62,58 @@ class TrackerSim:
         decBtn.pack()
 
         menuBtn = tk.Button(
-            lowerBar,
+            bar1,
             text="Menu",
             width=5,
             height=3,
             fg="black",
-            command=self.BtnMenuPressed
+            command=lambda: self.btnMenuCb()
         )
         menuBtn.pack(side=tk.LEFT)
 
         scrollBtn = tk.Button(
-            lowerBar,
+            bar1,
             text="Track",
             width=5,
             height=3,
             fg="black",
-            command=self.BtnTrackPressed
+            command=lambda: self.btnTrackCb()
         )
         scrollBtn.pack()
+
+        self.manAutoTxt = tk.StringVar()
+        manAutoBtn = tk.Button(
+            bar2,
+            textvariable=self.manAutoTxt,
+            width=5,
+            height=3,
+            fg="black",
+            command=self.BtnManAutoPressed
+        )
+        manAutoBtn.pack(side=tk.LEFT)
+        self.manAutoTxt.set("Manual")
+
+        eastBtn = tk.Button(
+            bar2,
+            text="East",
+            width=5,
+            height=3,
+            fg="black",
+            command=lambda: self.btnEastCb()
+        )
+        eastBtn.pack(side=tk.LEFT)
+
+        westBtn = tk.Button(
+            bar2,
+            text="West",
+            width=5,
+            height=3,
+            fg="black",
+            command=lambda: self.btnWestCb()
+        )
+        westBtn.pack(side=tk.LEFT)
+
+
 
     def Start(self):
         self.window.mainloop()
@@ -105,11 +142,14 @@ class TrackerSim:
     def WestLimit(self):
         return self.westLimit
 
-    def BtnMenuPressed(self):
-        self.btnMenuCb()
 
-    def BtnTrackPressed(self):
-        self.btnTrackCb()
+
+    def BtnManAutoPressed(self):
+        if (self.manAutoTxt.get() == "Manual"):
+            self.manAutoTxt.set("Auto")
+        else:
+            self.manAutoTxt.set("Manual")
+        self.btnManAutoCb()
 
     def BtnDnInc(self, event):
         self.btnDnIncCbJob = self.window.after(1000, self.BtnHeldInc)

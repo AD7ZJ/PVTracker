@@ -32,8 +32,11 @@ class MenuBase:
 class MenuHome(MenuBase):
     def __init__(self, tracker):
         super().__init__(tracker)
-        self.iface.Display("Tracking home", 1)
-        self.iface.Display("", 2)
+        self.iface.Display("%d/%d/%d %d:%d" % (tracker.day, tracker.month, tracker.year, tracker.hour, tracker.minute), 1)
+        if (tracker.manualMode):
+            self.iface.Display("Manual", 2)
+        else:
+            self.iface.Display("Auto", 2)
 
 
 class MenuMoveSafe(MenuBase):
@@ -165,6 +168,40 @@ class MenuDateSetMin(MenuBase):
             self.tracker.minute = 59
         self.DisplayMin()
 
+class MenuSetLat(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Lattitude:", 1)
+        self.DisplayLat()
+
+    def DisplayLat(self):
+        self.iface.Display("%.2f" % (self.tracker.lat), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.lat += .01
+        self.DisplayLat()
+
+    def BtnDecPressed(self):
+        self.tracker.lat -= .01
+        self.DisplayLat()
+
+class MenuSetLon(MenuBase):
+    def __init__(self, tracker):
+        super().__init__(tracker)
+        self.iface.Display("Set Longitude:", 1)
+        self.DisplayLon()
+
+    def DisplayLon(self):
+        self.iface.Display("%.2f" % (self.tracker.lon), 2)
+
+    def BtnIncPressed(self):
+        self.tracker.lon += .01
+        self.DisplayLon()
+
+    def BtnDecPressed(self):
+        self.tracker.lon -= .01
+        self.DisplayLon()
+
 class Tracker:
     def __init__(self, lattitude, longitude, iface):
         """Constructor"""
@@ -178,6 +215,7 @@ class Tracker:
         self.iface.btnDecreaseCb = lambda: self.menu.BtnDecPressed()
         self.iface.btnTrackCb = lambda: self.menu.BtnTrackPressed()
         self.iface.btnMenuCb = self.BtnMenuPressed
+        self.iface.btnManAutoCb = self.BtnManAutoPressed
         self.menus = [globals()["MenuHome"], 
                       globals()["MenuMoveSafe"],
                       globals()["MenuRuntime"],
@@ -187,12 +225,10 @@ class Tracker:
                       globals()["MenuDateSetDay"],
                       globals()["MenuDateSetHour"],
                       globals()["MenuDateSetMin"],
+                      globals()["MenuSetLat"],
+                      globals()["MenuSetLon"],
                      ]
         self.menuItem = 0
-
-        # create the first menu
-        self.menu = self.menus[0](self)
-
         self.setupMode = False
         self.year = 2021
         self.month = 10
@@ -200,7 +236,12 @@ class Tracker:
         self.hour = 0
         self.minute = 0
 
+        self.MenuRefresh()
 
+
+    def MenuRefresh(self):
+        # create the first menu
+        self.menu = self.menus[self.menuItem](self)
 
     def MoveArray(self, dirWest, enable):
         if (enable and not(self.pumpRunning)):
@@ -216,11 +257,13 @@ class Tracker:
 
     def BtnMenuPressed(self):
         self.menuItem += 1
-        if (self.menuItem >= len(self.menus)):
+        if (self.menuItem >= len(self.menus) or (not(self.setupMode) and self.menuItem >= 4)):
             self.menuItem = 0
-        # create new menu object
-        self.menu = self.menus[self.menuItem](self)
+        self.MenuRefresh()
 
+    def BtnManAutoPressed(self):
+        self.manualMode = not(self.manualMode)
+        self.MenuRefresh()
 
     def WorkerThread(self):
 
